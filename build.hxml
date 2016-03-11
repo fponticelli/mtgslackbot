@@ -1,0 +1,9 @@
+-js bin/bot.js
+-main Main
+-lib npm
+-lib jsrequire
+-lib thx.core
+-cp src
+--macro jsrequire.JSRequire.npmInstall(false)
+
+-cmd node bin/bot.js

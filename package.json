@@ -1,0 +1,22 @@
+{
+  "name": "mtgslackbot",
+  "version": "0.0.1",
+  "description": "Magic the Gathering bot for Slack",
+  "main": "bin/bot.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fponticelli/mtgslackbot"
+  },
+  "keywords": [
+    "mtg"
+  ],
+  "author": "Franco Ponticelli <franco.ponticelli@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/fponticelli/mtgslackbot/issues"
+  },
+  "homepage": "https://github.com/fponticelli/mtgslackbot"
+}
