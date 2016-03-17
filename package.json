@@ -18,5 +18,10 @@
   "bugs": {
     "url": "https://github.com/fponticelli/mtgslackbot/issues"
   },
-  "homepage": "https://github.com/fponticelli/mtgslackbot"
+  "homepage": "https://github.com/fponticelli/mtgslackbot",
+  "dependencies": {
+    "express": "^4.13.4",
+    "slack-node": "^0.2.0",
+    "websocket": "^1.0.22"
+  }
 }

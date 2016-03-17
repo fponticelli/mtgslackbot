@@ -1,9 +1,15 @@
 -js bin/bot.js
 -main Main
+-lib abe
 -lib npm
+-lib hxnodejs
 -lib jsrequire
 -lib thx.core
+-lib thx.http
+-lib thx.promise
+-lib thx.text
+-lib mtgx
 -cp src
---macro jsrequire.JSRequire.npmInstall(false)
+--macro jsrequire.JSRequire.npmInstall(true)
 
--cmd node bin/bot.js
+# -cmd node bin/bot.js
