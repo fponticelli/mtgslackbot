@@ -46,6 +46,68 @@ class Server implements abe.IRoute {
   function colorIdentities(?limit = 100, ?offset = 0)
     limitResponse(api.loadColorIdentities(), offset, limit, response);
 
+  @:get("/colors")
+  @:args(Query)
+  function colors(?limit = 100, ?offset = 0)
+    limitResponse(api.loadColors(), offset, limit, response);
+
+  @:get("/layouts")
+  @:args(Query)
+  function layouts(?limit = 100, ?offset = 0)
+    limitResponse(api.loadLayouts(), offset, limit, response);
+
+  @:get("/formats")
+  @:args(Query)
+  function formats(?limit = 100, ?offset = 0)
+    limitResponse(api.loadFormats(), offset, limit, response);
+
+  @:get("/legalities")
+  @:args(Query)
+  function legalities(?limit = 100, ?offset = 0)
+    limitResponse(api.loadLegalities(), offset, limit, response);
+
+  @:get("/mana-costs")
+  @:args(Query)
+  function manaCosts(?limit = 100, ?offset = 0)
+    limitResponse(api.loadManaCosts(), offset, limit, response);
+
+  @:get("/powers")
+  @:args(Query)
+  function powers(?limit = 100, ?offset = 0)
+    limitResponse(api.loadPowers(), offset, limit, response);
+
+  @:get("/toughness")
+  @:args(Query)
+  function toughness(?limit = 100, ?offset = 0)
+    limitResponse(api.loadToughness(), offset, limit, response);
+
+  @:get("/rarities")
+  @:args(Query)
+  function rarities(?limit = 100, ?offset = 0)
+    limitResponse(api.loadRarities(), offset, limit, response);
+
+  @:get("/subtypes")
+  @:args(Query)
+  function subtypes(?limit = 100, ?offset = 0)
+    limitResponse(api.loadSubtypes(), offset, limit, response);
+
+  @:get("/types")
+  @:args(Query)
+  function types(?limit = 100, ?offset = 0)
+    limitResponse(api.loadTypes(), offset, limit, response);
+
+  @:get("/all-types")
+  @:args(Query)
+  function allTypes(?limit = 100, ?offset = 0)
+    limitResponse(api.loadAllTypes(), offset, limit, response);
+
+    // power
+    // toughness
+    // rarity
+    // subtypes arr
+    // type
+    // types arr
+
   @:get("/card/:name")
   function card(name : String) {
     api.queryCard(name)

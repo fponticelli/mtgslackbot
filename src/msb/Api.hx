@@ -104,6 +104,84 @@ class Api {
     return Promise.value(colorIdentities = extractStringArrays(function(card) return card.colorIdentity));
   }
 
+  var colors : Array<String>;
+  public function loadColors() : Promise<Array<String>> {
+    if(null != colors)
+      return Promise.value(colors);
+    return Promise.value(colors = extractStringArrays(function(card) return card.colors));
+  }
+
+  var layouts : Array<String>;
+  public function loadLayouts() : Promise<Array<String>> {
+    if(null != layouts)
+      return Promise.value(layouts);
+    return Promise.value(layouts = extractStrings(function(card) return card.layout));
+  }
+
+  var formats : Array<String>;
+  public function loadFormats() : Promise<Array<String>> {
+    if(null != formats)
+      return Promise.value(formats);
+    return Promise.value(formats = extractStringArrays(function(card) return null == card.legalities ? [] : card.legalities.map(function(leg) return leg.format)));
+  }
+
+  var legalities : Array<String>;
+  public function loadLegalities() : Promise<Array<String>> {
+    if(null != legalities)
+      return Promise.value(legalities);
+    return Promise.value(legalities = extractStringArrays(function(card) return null == card.legalities ? [] : card.legalities.map(function(leg) return leg.legality)));
+  }
+
+  var manaCosts : Array<String>;
+  public function loadManaCosts() : Promise<Array<String>> {
+    if(null != manaCosts)
+      return Promise.value(manaCosts);
+    return Promise.value(manaCosts = extractStrings(function(card) return card.manaCost));
+  }
+
+  // power
+  var powers : Array<String>;
+  public function loadPowers() : Promise<Array<String>> {
+    if(null != powers)
+      return Promise.value(powers);
+    return Promise.value(powers = extractStrings(function(card) return card.power));
+  }
+  // toughness
+  var toughness : Array<String>;
+  public function loadToughness() : Promise<Array<String>> {
+    if(null != toughness)
+      return Promise.value(toughness);
+    return Promise.value(toughness = extractStrings(function(card) return card.toughness));
+  }
+  // rarity
+  var rarities : Array<String>;
+  public function loadRarities() : Promise<Array<String>> {
+    if(null != rarities)
+      return Promise.value(rarities);
+    return Promise.value(rarities = extractStrings(function(card) return card.rarity));
+  }
+  // subtypes arr
+  var subtypes : Array<String>;
+  public function loadSubtypes() : Promise<Array<String>> {
+    if(null != subtypes)
+      return Promise.value(subtypes);
+    return Promise.value(subtypes = extractStringArrays(function(card) return card.subtypes));
+  }
+  // type
+  var types : Array<String>;
+  public function loadTypes() : Promise<Array<String>> {
+    if(null != types)
+      return Promise.value(types);
+    return Promise.value(types = extractStrings(function(card) return card.type));
+  }
+  // types arr
+  var allTypes : Array<String>;
+  public function loadAllTypes() : Promise<Array<String>> {
+    if(null != allTypes)
+      return Promise.value(allTypes);
+    return Promise.value(allTypes = extractStringArrays(function(card) return card.types));
+  }
+
   // helpers
   function extractStringArrays(extractor : NormalizedCard -> Array<String>)
     return extractArrays(extractor, thx.Set.createString()).toArray().order(Strings.compare);

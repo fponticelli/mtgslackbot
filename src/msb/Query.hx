@@ -6,6 +6,23 @@ enum Query {
   Name(search : TextSearch);
   Text(search : TextSearch);
   CMC(search : NumberSearch);
+  // color identity
+  // colors
+  // layout
+  // formats
+  // legalities
+  // id
+  // imagename (TextSearch)
+  // manaCost
+  // rulings
+
+  // power
+  // toughness
+  // rarity
+  // subtypes arr
+  // type
+  // types arr
+
 
   // operators
   And(qs : Array<Query>);
