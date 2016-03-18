@@ -5,7 +5,9 @@ import haxe.Json;
 import thx.Error;
 import thx.promise.Promise;
 import thx.text.Diactrics;
+import thx.Set;
 using thx.Arrays;
+using thx.Floats;
 using thx.Ints;
 using thx.Iterators;
 using thx.Maps;
@@ -67,11 +69,69 @@ class Api {
               .map(function(o : Card) : NormalizedCard {
                 return o.merge({
                   normalizedName : null != o.name ? cleanName(o.name) : "",
-                  normalizedText : null != o.text ? cleanName(o.text) : ""
+                  normalizedText : null != o.text ? cleanName(o.text) : "",
+                  normalizedFlavor : null != o.flavor ? cleanName(o.flavor) : ""
                 });
               })
               .order(function(a, b) return Ints.compare(b.multiverseid, a.multiverseid));
     cardsByName = generateMap(cards);
+  }
+
+  // card details
+  var artists : Array<String>;
+  public function loadArtists() : Promise<Array<String>> {
+    if(null != artists)
+      return Promise.value(artists);
+    return Promise.value(artists = extractStrings(function(card) return card.artist));
+  }
+
+  var convertedManaCosts : Array<Float>;
+  public function loadConvertedManaCosts() : Promise<Array<Float>> {
+    if(null != convertedManaCosts)
+      return Promise.value(convertedManaCosts);
+    var values = extractStrings(function(card) return '${card.cmc}');
+    return Promise.value(
+      convertedManaCosts = values
+        .map(Std.parseFloat)
+        .order(Floats.compare)
+    );
+  }
+
+  var colorIdentities : Array<String>;
+  public function loadColorIdentities() : Promise<Array<String>> {
+    if(null != colorIdentities)
+      return Promise.value(colorIdentities);
+    return Promise.value(colorIdentities = extractStringArrays(function(card) return card.colorIdentity));
+  }
+
+  // helpers
+  function extractStringArrays(extractor : NormalizedCard -> Array<String>)
+    return extractArrays(extractor, thx.Set.createString()).toArray().order(Strings.compare);
+
+  function extractStrings(extractor : NormalizedCard -> String) {
+    var set = extractValues(extractor, thx.Set.createString());
+    set.remove("undefined"); // beh
+    return set.toArray().order(Strings.compare);
+  }
+
+  function extractArrays<T>(extractor : NormalizedCard -> Array<T>, set : thx.Set<T>) {
+    return cards.reduce(function(acc : thx.Set<T>, card) {
+      var values = extractor(card);
+      if(null == values)
+        return acc;
+      for(v in values)
+        acc.add(v);
+      return acc;
+    }, set);
+  }
+
+  function extractValues<T>(extractor : NormalizedCard -> T, set : thx.Set<T>) {
+    return cards.reduce(function(acc : thx.Set<T>, card) {
+      var value = extractor(card);
+      if(null != value)
+        acc.add(value);
+      return acc;
+    }, set);
   }
 
   public static function generateMap(list : Array<Card>) : Map<String, Card> {

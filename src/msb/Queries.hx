@@ -16,8 +16,11 @@ class Queries {
 
   public static function generateFilter(q : Query) : NormalizedCard -> Bool {
     return switch q {
-      case Name(search): queryTextSearch(search, function(card) return card.normalizedName);
-      case Text(search): queryTextSearch(search, function(card) return card.normalizedText);
+      case Artist(search): queryTextSearch(search, function(card) return card.artist);
+      case Flavor(search): queryTextSearch(search, function(card) return card.normalizedFlavor);
+      case Name(search):   queryTextSearch(search, function(card) return card.normalizedName);
+      case Text(search):   queryTextSearch(search, function(card) return card.normalizedText);
+      case CMC(search):    queryNumberSearch(search, function(card) return card.cmc);
       case Negate(q):
         var filter = generateFilter(q);
         function(card) return !filter(card);
@@ -37,6 +40,26 @@ class Queries {
               return false;
           return true;
         }
+    };
+  }
+
+  public static function queryNumberSearch(search : NumberSearch, extractor : NormalizedCard -> Float) {
+    return switch search {
+      case GT(value):
+        function(card) return extractor(card) > value;
+      case GTE(value):
+        function(card) return extractor(card) >= value;
+      case LT(value):
+        function(card) return extractor(card) < value;
+      case LTE(value):
+        function(card) return extractor(card) <= value;
+      case Equals(value):
+        function(card) return extractor(card) == value;
+      case Between(minInclusive, maxInclusive):
+        function(card) {
+          var value = extractor(card);
+          return value >= minInclusive && value <= maxInclusive;
+        };
     };
   }
 

@@ -1,8 +1,11 @@
 package msb;
 
 enum Query {
+  Artist(search : TextSearch);
+  Flavor(search : TextSearch);
   Name(search : TextSearch);
   Text(search : TextSearch);
+  CMC(search : NumberSearch);
 
   // operators
   And(qs : Array<Query>);
@@ -16,4 +19,13 @@ enum TextSearch {
   Contains(text : String);
   StartWith(text : String);
   EndWith(text : String);
+}
+
+enum NumberSearch {
+  GT(value : Float);
+  GTE(value : Float);
+  LT(value : Float);
+  LTE(value : Float);
+  Equals(value : Float);
+  Between(minInclusive : Float, maxInclusive : Float);
 }
