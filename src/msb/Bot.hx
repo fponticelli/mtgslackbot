@@ -42,11 +42,19 @@ class Bot {
     if(requests.length == 0) return;
     requests.each(function(request) {
       switch request {
-        case Image(name): api.getCard(name).success(sendCardImage.bind(channel, _));
-        case Rulings(name): api.getCard(name).success(sendCardRulings.bind(channel, _));
+        case Image(name):   getCard(channel, name).success(sendCardImage.bind(channel, _));
+        case Rulings(name): getCard(channel, name).success(sendCardRulings.bind(channel, _));
         case Invalid:
       }
     });
+  }
+
+  function getCard(channel, name : String) {
+    return api.getCard(name)
+      .failure(function(err) {
+        var text = 'unable to find card *${name}*';
+        slack.api("chat.postMessage", {channel: channel, as_user: true, text: text }, function(a, b) { });
+      });
   }
 
   public function sendCardImage(channel, card : Card) {
@@ -61,7 +69,9 @@ class Bot {
   }
 
   public function sendCardRulings(channel, card : Card) {
-    var text = card.rulings.map(function(o) return o.date + ": " + o.text).join("\n");
+    var text = (null == card.rulings || card.rulings.length == 0) ?
+      'no rulings found for *${card.name}*' :
+      card.rulings.map(function(o) return '${o.date}: ${o.text}').join("\n");
     slack.api("chat.postMessage", {channel: channel, as_user: true, text: text}, function(a, b) {
       // trace(a, b);
     });

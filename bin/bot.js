@@ -1964,7 +1964,7 @@ msb_Bot.prototype = {
 			switch(request[1]) {
 			case 0:
 				var name = request[2];
-				var tmp = _g.api.getCard(name);
+				var tmp = _g.getCard(channel,name);
 				var f = $bind(_g,_g.sendCardImage);
 				var a1 = channel;
 				thx_promise__$Promise_Promise_$Impl_$.success(tmp,function(a2) {
@@ -1973,7 +1973,7 @@ msb_Bot.prototype = {
 				break;
 			case 1:
 				var name1 = request[2];
-				var tmp1 = _g.api.getCard(name1);
+				var tmp1 = _g.getCard(channel,name1);
 				var f1 = $bind(_g,_g.sendCardRulings);
 				var a11 = channel;
 				thx_promise__$Promise_Promise_$Impl_$.success(tmp1,function(a21) {
@@ -1985,14 +1985,22 @@ msb_Bot.prototype = {
 			}
 		});
 	}
+	,getCard: function(channel,name) {
+		var _g = this;
+		return thx_promise__$Promise_Promise_$Impl_$.failure(this.api.getCard(name),function(err) {
+			var text = "unable to find card *" + name + "*";
+			_g.slack.api("chat.postMessage",{ channel : channel, as_user : true, text : text},function(a,b) {
+			});
+		});
+	}
 	,sendCardImage: function(channel,card) {
 		var attachments = JSON.stringify([{ title : card.name, image_url : msb_Bot.getGathererImageUrl(card)}]);
 		this.slack.api("chat.postMessage",{ channel : channel, as_user : true, text : " ", attachments : attachments},function(a,b) {
 		});
 	}
 	,sendCardRulings: function(channel,card) {
-		var text = card.rulings.map(function(o) {
-			return o.date + ": " + o.text;
+		var text = null == card.rulings || card.rulings.length == 0?"no rulings found for *" + card.name + "*":card.rulings.map(function(o) {
+			return "" + o.date + ": " + o.text;
 		}).join("\n");
 		this.slack.api("chat.postMessage",{ channel : channel, as_user : true, text : text},function(a,b) {
 		});
