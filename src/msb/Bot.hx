@@ -42,28 +42,29 @@ class Bot {
     if(requests.length == 0) return;
     requests.each(function(request) {
       switch request {
-        case Image(name): sendCardImage(channel, name);
+        case Image(name): api.getCard(name).success(sendCardImage.bind(channel, _));
+        case Rulings(name): api.getCard(name).success(sendCardRulings.bind(channel, _));
         case Invalid:
       }
     });
   }
 
-  public function sendCardImage(channel, name : String) {
-    api.getCard(name)
-      .success(function(card) {
-        trace('card found', card.name);
-        var attachments = Json.stringify([{
-            title: card.name,
-            // title_link: card.store_url,
-            image_url: getGathererImageUrl(card)
-          }]);
-        slack.api("chat.postMessage", {channel: channel, as_user: true, text: ' ', attachments: attachments}, function(a, b) {
-          // trace(a, b);
-        });
-      })
-      .failure(function(err) {
-        trace('card not found $name');
-      });
+  public function sendCardImage(channel, card : Card) {
+    var attachments = Json.stringify([{
+        title: card.name,
+        // title_link: card.store_url,
+        image_url: getGathererImageUrl(card)
+      }]);
+    slack.api("chat.postMessage", {channel: channel, as_user: true, text: ' ', attachments: attachments}, function(a, b) {
+      // trace(a, b);
+    });
+  }
+
+  public function sendCardRulings(channel, card : Card) {
+    var text = card.rulings.map(function(o) return o.date + ": " + o.text).join("\n");
+    slack.api("chat.postMessage", {channel: channel, as_user: true, text: text}, function(a, b) {
+      // trace(a, b);
+    });
   }
 
   public function stop() {
@@ -75,16 +76,6 @@ class Bot {
   }
 }
 
-
-//         var names = extractCards(data.text);
-//         trace("match", names);
-//         if(names.length > 0) {
-//           var cardsfound = names.map(function(name) return map.get(msb.Api.cleanName(name))).compact();
-//           trace('found: ${cardsfound.length}');
-//           if(cardsfound.length > 0) {
-
-//           }
-//         }
 //         var search = extractSearch(data.text).map(function(t) return t.toLowerCase());
 //         trace("search", search);
 //         if(search.length > 0) {

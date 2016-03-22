@@ -19,6 +19,8 @@ class MessageParser {
     return switch parts[1].toLowerCase() {
       case "image":
         Image(parts[0]);
+      case "r" | "rules" | "rulings":
+        Rulings(parts[0]);
       case _:
         Invalid;
     };
@@ -27,5 +29,6 @@ class MessageParser {
 
 enum CardRequest {
   Image(name : String);
+  Rulings(name : String);
   Invalid;
 }

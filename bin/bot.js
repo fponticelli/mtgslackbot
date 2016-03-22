@@ -1964,23 +1964,37 @@ msb_Bot.prototype = {
 			switch(request[1]) {
 			case 0:
 				var name = request[2];
-				_g.sendCardImage(channel,name);
+				var tmp = _g.api.getCard(name);
+				var f = $bind(_g,_g.sendCardImage);
+				var a1 = channel;
+				thx_promise__$Promise_Promise_$Impl_$.success(tmp,function(a2) {
+					f(a1,a2);
+				});
 				break;
 			case 1:
+				var name1 = request[2];
+				var tmp1 = _g.api.getCard(name1);
+				var f1 = $bind(_g,_g.sendCardRulings);
+				var a11 = channel;
+				thx_promise__$Promise_Promise_$Impl_$.success(tmp1,function(a21) {
+					f1(a11,a21);
+				});
+				break;
+			case 2:
 				break;
 			}
 		});
 	}
-	,sendCardImage: function(channel,name) {
-		var _g = this;
-		thx_promise__$Promise_Promise_$Impl_$.failure(thx_promise__$Promise_Promise_$Impl_$.success(this.api.getCard(name),function(card) {
-			haxe_Log.trace("card found",{ fileName : "Bot.hx", lineNumber : 54, className : "msb.Bot", methodName : "sendCardImage", customParams : [card.name]});
-			var attachments = JSON.stringify([{ title : card.name, image_url : msb_Bot.getGathererImageUrl(card)}]);
-			_g.slack.api("chat.postMessage",{ channel : channel, as_user : true, text : " ", attachments : attachments},function(a,b) {
-				haxe_Log.trace(a,{ fileName : "Bot.hx", lineNumber : 61, className : "msb.Bot", methodName : "sendCardImage", customParams : [b]});
-			});
-		}),function(err) {
-			haxe_Log.trace("card not found " + name,{ fileName : "Bot.hx", lineNumber : 65, className : "msb.Bot", methodName : "sendCardImage"});
+	,sendCardImage: function(channel,card) {
+		var attachments = JSON.stringify([{ title : card.name, image_url : msb_Bot.getGathererImageUrl(card)}]);
+		this.slack.api("chat.postMessage",{ channel : channel, as_user : true, text : " ", attachments : attachments},function(a,b) {
+		});
+	}
+	,sendCardRulings: function(channel,card) {
+		var text = card.rulings.map(function(o) {
+			return o.date + ": " + o.text;
+		}).join("\n");
+		this.slack.api("chat.postMessage",{ channel : channel, as_user : true, text : text},function(a,b) {
 		});
 	}
 	,stop: function() {
@@ -2005,13 +2019,16 @@ msb_MessageParser.cardRequest = function(value) {
 	switch(_g) {
 	case "image":
 		return msb_CardRequest.Image(parts[0]);
+	case "r":case "rules":case "rulings":
+		return msb_CardRequest.Rulings(parts[0]);
 	default:
 		return msb_CardRequest.Invalid;
 	}
 };
-var msb_CardRequest = { __ename__ : ["msb","CardRequest"], __constructs__ : ["Image","Invalid"] };
+var msb_CardRequest = { __ename__ : ["msb","CardRequest"], __constructs__ : ["Image","Rulings","Invalid"] };
 msb_CardRequest.Image = function(name) { var $x = ["Image",0,name]; $x.__enum__ = msb_CardRequest; $x.toString = $estr; return $x; };
-msb_CardRequest.Invalid = ["Invalid",1];
+msb_CardRequest.Rulings = function(name) { var $x = ["Rulings",1,name]; $x.__enum__ = msb_CardRequest; $x.toString = $estr; return $x; };
+msb_CardRequest.Invalid = ["Invalid",2];
 msb_CardRequest.Invalid.toString = $estr;
 msb_CardRequest.Invalid.__enum__ = msb_CardRequest;
 var msb_Queries = function() { };
