@@ -4,18 +4,39 @@ using thx.Functions;
 import js.Node;
 import thx.promise.Promise;
 import express.Response;
+import js.Node.console;
+using thx.Arrays;
+using thx.Strings;
 
 class Server implements abe.IRoute {
-  public static function start(api : Api, port = 9998) {
+  public static function start(api : Api, port = 9998, tokens : Array<String>) {
     var host = "0.0.0.0";
     var app = new abe.App();
-    app.router.register(new Server(api));
+    var server = new Server(api);
+    app.router.register(server);
     app.http(port, host);
+    // start bots
+    tokens.each(server.startBot);
   }
 
+  var bots : Map<String, Bot>;
   var api : Api;
   public function new(api : Api) {
     this.api = api;
+    this.bots = new Map();
+  }
+
+  public function startBot(token : String) {
+    if(bots.exists(token)) return;
+    console.log('Start bot with token ${hideToken(token)}');
+    var bot = new Bot(token, api);
+    bots.set(token, bot);
+  }
+
+  function hideToken(token : String) {
+    var len = token.length,
+        reveal = 5;
+    return token.substring(0, reveal).rpad('*', len);
   }
 
   @:get("/")
@@ -110,7 +131,7 @@ class Server implements abe.IRoute {
 
   @:get("/card/:name")
   function card(name : String) {
-    api.queryCard(name)
+    api.getCard(name)
     .success.fn(response.send(_))
     .failure.fn(response.status(503).send(_));
   }

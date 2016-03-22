@@ -37,7 +37,7 @@ class Api {
   public function count() : Promise<Int>
     return Promise.value(cards.length);
 
-  public function queryCard(name : String) {
+  public function getCard(name : String) {
     var cleanedName = cleanName(name),
         card = cardsByName.get(cleanedName);
     return null != card ?
