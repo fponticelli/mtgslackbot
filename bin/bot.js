@@ -2002,6 +2002,9 @@ msb_Bot.prototype = {
 		var text = null == card.rulings || card.rulings.length == 0?"no rulings found for *" + card.name + "*":card.rulings.map(function(o) {
 			return "" + o.date + ": " + o.text;
 		}).join("\n");
+		this.sendTextMessage(channel,text);
+	}
+	,sendTextMessage: function(channel,text) {
 		this.slack.api("chat.postMessage",{ channel : channel, as_user : true, text : text},function(a,b) {
 		});
 	}

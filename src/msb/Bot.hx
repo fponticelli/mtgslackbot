@@ -72,14 +72,16 @@ class Bot {
     var text = (null == card.rulings || card.rulings.length == 0) ?
       'no rulings found for *${card.name}*' :
       card.rulings.map(function(o) return '${o.date}: ${o.text}').join("\n");
+    sendTextMessage(channel, text);
+  }
+
+  public function sendTextMessage(channel, text : String) {
     slack.api("chat.postMessage", {channel: channel, as_user: true, text: text}, function(a, b) {
       // trace(a, b);
     });
   }
 
-  public function stop() {
-
-  }
+  public function stop() {}
 
   public static function getGathererImageUrl(card : Card) {
     return 'http://gatherer.wizards.com/Handlers/Image.ashx?multiverseid=${card.multiverseid}&type=card';
