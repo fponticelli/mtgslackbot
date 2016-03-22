@@ -4,6 +4,7 @@ import ext.Client;
 import ext.Slack;
 import haxe.Json;
 import thx.promise.Promise;
+import mtgx.json.Card;
 using thx.Arrays;
 
 class Bot {
@@ -36,16 +37,18 @@ class Bot {
     sendCards(data.channel, MessageParser.extractCards(data.text));
   }
 
-  public function sendCards(channel, names : Array<String>) {
-    if(names.length == 0) return;
-    Promise.all(names.map(function(name) return api.getCard(name)))
+  public function sendCards(channel, cards : Array<{ name : String }>) {
+    if(cards.length == 0) return;
+    Promise.all(cards.map(function(card) return api.getCard(card.name)))
       .success(function(cards) {
         cards = cards.compact();
         if(cards.length == 0) return;
-        var attachments = Json.stringify(cards.map(function(card) return {
-          title: card.name,
-          // title_link: card.store_url,
-          // image_url: card.getLatestEdition().image_url
+        var attachments = Json.stringify(cards.map(function(card) {
+          return {
+            title: card.name,
+            // title_link: card.store_url,
+            image_url: getGathererImageUrl(card)
+          };
         }));
         slack.api("chat.postMessage", {channel: channel, as_user: true, text: ' ', attachments: attachments}, function(_, _) {});
       });
@@ -53,6 +56,10 @@ class Bot {
 
   public function stop() {
 
+  }
+
+  public static function getGathererImageUrl(card : Card) {
+    return 'http://gatherer.wizards.com/Handlers/Image.ashx?multiverseid=${card.multiverseid}&type=card';
   }
 }
 

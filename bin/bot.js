@@ -1939,12 +1939,15 @@ var msb_Bot = function(token,api) {
 	});
 };
 msb_Bot.__name__ = ["msb","Bot"];
+msb_Bot.getGathererImageUrl = function(card) {
+	return "http://gatherer.wizards.com/Handlers/Image.ashx?multiverseid=" + card.multiverseid + "&type=card";
+};
 msb_Bot.prototype = {
 	api: null
 	,slack: null
 	,userId: null
 	,onConnectFailed: function(error) {
-		haxe_Log.trace("error connecting",{ fileName : "Bot.hx", lineNumber : 26, className : "msb.Bot", methodName : "onConnectFailed", customParams : [error]});
+		haxe_Log.trace("error connecting",{ fileName : "Bot.hx", lineNumber : 27, className : "msb.Bot", methodName : "onConnectFailed", customParams : [error]});
 	}
 	,onConnect: function(connection) {
 		connection.on("message",$bind(this,this.onMessage));
@@ -1954,16 +1957,16 @@ msb_Bot.prototype = {
 		if(data.user == this.userId || data.type != "message") return;
 		this.sendCards(data.channel,msb_MessageParser.extractCards(data.text));
 	}
-	,sendCards: function(channel,names) {
+	,sendCards: function(channel,cards) {
 		var _g = this;
-		if(names.length == 0) return;
-		thx_promise__$Promise_Promise_$Impl_$.success(thx_promise__$Promise_Promise_$Impl_$.all(names.map(function(name) {
-			return _g.api.getCard(name);
-		})),function(cards) {
-			cards = thx_Arrays.compact(cards);
-			if(cards.length == 0) return;
-			var attachments = JSON.stringify(cards.map(function(card) {
-				return { title : card.name};
+		if(cards.length == 0) return;
+		thx_promise__$Promise_Promise_$Impl_$.success(thx_promise__$Promise_Promise_$Impl_$.all(cards.map(function(card) {
+			return _g.api.getCard(card.name);
+		})),function(cards1) {
+			cards1 = thx_Arrays.compact(cards1);
+			if(cards1.length == 0) return;
+			var attachments = JSON.stringify(cards1.map(function(card1) {
+				return { title : card1.name, image_url : msb_Bot.getGathererImageUrl(card1)};
 			}));
 			_g.slack.api("chat.postMessage",{ channel : channel, as_user : true, text : " ", attachments : attachments},function(_,_1) {
 			});
@@ -1979,10 +1982,13 @@ msb_MessageParser.extractCards = function(message) {
 	var pattern = new EReg("(?:[^\\?]|^)\\[([^\\]]+)\\]","");
 	var result = [];
 	while(pattern.match(message)) {
-		result.push(pattern.matched(1));
+		result.push(msb_MessageParser.cardRequest(pattern.matched(1)));
 		message = pattern.matchedRight();
 	}
 	return result;
+};
+msb_MessageParser.cardRequest = function(value) {
+	return { name : value};
 };
 var msb_Queries = function() { };
 msb_Queries.__name__ = ["msb","Queries"];
@@ -2238,6 +2244,18 @@ msb_Server.start = function(api,port,tokens) {
 	var __abe_process16 = new msb_Server_$card_$RouteProcess({ name : null},server,__abe_processor16);
 	var __abe_uses16 = [];
 	router.registerMethod("/card/:name","get",__abe_process16,__abe_uses16,[]);
+	var filters17 = new abe_core_ArgumentsFilter();
+	var __abe_processor17 = new abe_core_ArgumentProcessor(filters17,[{ name : "token", optional : false, type : "String", sources : ["body"]}]);
+	var __abe_process17 = new msb_Server_$createBot_$RouteProcess({ token : null},server,__abe_processor17);
+	var __abe_uses17 = [];
+	__abe_uses17 = __abe_uses17.concat([mw_BodyParser.json()]);
+	router.registerMethod("/bot","post",__abe_process17,__abe_uses17,[]);
+	var filters18 = new abe_core_ArgumentsFilter();
+	var __abe_processor18 = new abe_core_ArgumentProcessor(filters18,[{ name : "token", optional : false, type : "String", sources : ["body"]}]);
+	var __abe_process18 = new msb_Server_$destroyBot_$RouteProcess({ token : null},server,__abe_processor18);
+	var __abe_uses18 = [];
+	__abe_uses18 = __abe_uses18.concat([mw_BodyParser.json()]);
+	router.registerMethod("/bot","delete",__abe_process18,__abe_uses18,[]);
 	app.http(port,host);
 	thx_Arrays.each(tokens,$bind(server,server.startBot));
 };
@@ -2268,6 +2286,15 @@ msb_Server.prototype = {
 		var bot = new msb_Bot(token,this.api);
 		var _this1 = this.bots;
 		if(__map_reserved[token] != null) _this1.setReserved(token,bot); else _this1.h[token] = bot;
+	}
+	,stopBot: function(token) {
+		var tmp;
+		var _this = this.bots;
+		if(__map_reserved[token] != null) tmp = _this.getReserved(token); else tmp = _this.h[token];
+		var bot = tmp;
+		if(null == bot) return;
+		this.bots.remove(token);
+		bot.stop();
 	}
 	,hideToken: function(token) {
 		var len = token.length;
@@ -2366,6 +2393,12 @@ msb_Server.prototype = {
 			return response.status(503).send(_1);
 		});
 	}
+	,createBot: function(token,request,response,next) {
+		this.startBot(token);
+	}
+	,destroyBot: function(token,request,response,next) {
+		this.stopBot(token);
+	}
 	,toString: function() {
 		return "msb.Server";
 	}
@@ -2447,6 +2480,28 @@ msb_Server_$convertedManaCosts_$RouteProcess.prototype = $extend(abe_core_RouteP
 		this.instance.convertedManaCosts(this.args.limit,this.args.offset,request,response,next);
 	}
 	,__class__: msb_Server_$convertedManaCosts_$RouteProcess
+});
+var msb_Server_$createBot_$RouteProcess = function(args,instance,argumentProcessor) {
+	abe_core_RouteProcess.call(this,args,instance,argumentProcessor);
+};
+msb_Server_$createBot_$RouteProcess.__name__ = ["msb","Server_createBot_RouteProcess"];
+msb_Server_$createBot_$RouteProcess.__super__ = abe_core_RouteProcess;
+msb_Server_$createBot_$RouteProcess.prototype = $extend(abe_core_RouteProcess.prototype,{
+	execute: function(request,response,next) {
+		this.instance.createBot(this.args.token,request,response,next);
+	}
+	,__class__: msb_Server_$createBot_$RouteProcess
+});
+var msb_Server_$destroyBot_$RouteProcess = function(args,instance,argumentProcessor) {
+	abe_core_RouteProcess.call(this,args,instance,argumentProcessor);
+};
+msb_Server_$destroyBot_$RouteProcess.__name__ = ["msb","Server_destroyBot_RouteProcess"];
+msb_Server_$destroyBot_$RouteProcess.__super__ = abe_core_RouteProcess;
+msb_Server_$destroyBot_$RouteProcess.prototype = $extend(abe_core_RouteProcess.prototype,{
+	execute: function(request,response,next) {
+		this.instance.destroyBot(this.args.token,request,response,next);
+	}
+	,__class__: msb_Server_$destroyBot_$RouteProcess
 });
 var msb_Server_$formats_$RouteProcess = function(args,instance,argumentProcessor) {
 	abe_core_RouteProcess.call(this,args,instance,argumentProcessor);
@@ -2558,6 +2613,7 @@ msb_Server_$types_$RouteProcess.prototype = $extend(abe_core_RouteProcess.protot
 	}
 	,__class__: msb_Server_$types_$RouteProcess
 });
+var mw_BodyParser = require("body-parser");
 var thx_Arrays = function() { };
 thx_Arrays.__name__ = ["thx","Arrays"];
 thx_Arrays.append = function(array,element) {

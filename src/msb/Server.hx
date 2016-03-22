@@ -33,6 +33,13 @@ class Server implements abe.IRoute {
     bots.set(token, bot);
   }
 
+  public function stopBot(token : String) {
+    var bot = bots.get(token);
+    if(null == bot) return;
+    bots.remove(token);
+    bot.stop();
+  }
+
   function hideToken(token : String) {
     var len = token.length,
         reveal = 5;
@@ -135,6 +142,18 @@ class Server implements abe.IRoute {
     .success.fn(response.send(_))
     .failure.fn(response.status(503).send(_));
   }
+
+  @:post("/bot")
+  @:use(mw.BodyParser.json())
+  @:args(Body)
+  function createBot(token : String)
+    startBot(token);
+
+  @:delete("/bot")
+  @:use(mw.BodyParser.json())
+  @:args(Body)
+  function destroyBot(token : String)
+    stopBot(token);
 
   static function limitResponse<T>(promise : Promise<Array<T>>, offset, limit, response : Response) {
     promise
