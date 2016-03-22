@@ -5,6 +5,7 @@ import ext.Slack;
 import haxe.Json;
 import thx.promise.Promise;
 import mtgx.json.Card;
+import msb.MessageParser;
 using thx.Arrays;
 
 class Bot {
@@ -37,20 +38,31 @@ class Bot {
     sendCards(data.channel, MessageParser.extractCards(data.text));
   }
 
-  public function sendCards(channel, cards : Array<{ name : String }>) {
-    if(cards.length == 0) return;
-    Promise.all(cards.map(function(card) return api.getCard(card.name)))
-      .success(function(cards) {
-        cards = cards.compact();
-        if(cards.length == 0) return;
-        var attachments = Json.stringify(cards.map(function(card) {
-          return {
+  public function sendCards(channel, requests : Array<CardRequest>) {
+    if(requests.length == 0) return;
+    requests.each(function(request) {
+      switch request {
+        case Image(name): sendCardImage(channel, name);
+        case Invalid:
+      }
+    });
+  }
+
+  public function sendCardImage(channel, name : String) {
+    api.getCard(name)
+      .success(function(card) {
+        trace('card found', card.name);
+        var attachments = Json.stringify([{
             title: card.name,
             // title_link: card.store_url,
             image_url: getGathererImageUrl(card)
-          };
-        }));
-        slack.api("chat.postMessage", {channel: channel, as_user: true, text: ' ', attachments: attachments}, function(_, _) {});
+          }]);
+        slack.api("chat.postMessage", {channel: channel, as_user: true, text: ' ', attachments: attachments}, function(a, b) {
+          // trace(a, b);
+        });
+      })
+      .failure(function(err) {
+        trace('card not found $name');
       });
   }
 

@@ -1947,7 +1947,7 @@ msb_Bot.prototype = {
 	,slack: null
 	,userId: null
 	,onConnectFailed: function(error) {
-		haxe_Log.trace("error connecting",{ fileName : "Bot.hx", lineNumber : 27, className : "msb.Bot", methodName : "onConnectFailed", customParams : [error]});
+		haxe_Log.trace("error connecting",{ fileName : "Bot.hx", lineNumber : 28, className : "msb.Bot", methodName : "onConnectFailed", customParams : [error]});
 	}
 	,onConnect: function(connection) {
 		connection.on("message",$bind(this,this.onMessage));
@@ -1957,19 +1957,30 @@ msb_Bot.prototype = {
 		if(data.user == this.userId || data.type != "message") return;
 		this.sendCards(data.channel,msb_MessageParser.extractCards(data.text));
 	}
-	,sendCards: function(channel,cards) {
+	,sendCards: function(channel,requests) {
 		var _g = this;
-		if(cards.length == 0) return;
-		thx_promise__$Promise_Promise_$Impl_$.success(thx_promise__$Promise_Promise_$Impl_$.all(cards.map(function(card) {
-			return _g.api.getCard(card.name);
-		})),function(cards1) {
-			cards1 = thx_Arrays.compact(cards1);
-			if(cards1.length == 0) return;
-			var attachments = JSON.stringify(cards1.map(function(card1) {
-				return { title : card1.name, image_url : msb_Bot.getGathererImageUrl(card1)};
-			}));
-			_g.slack.api("chat.postMessage",{ channel : channel, as_user : true, text : " ", attachments : attachments},function(_,_1) {
+		if(requests.length == 0) return;
+		thx_Arrays.each(requests,function(request) {
+			switch(request[1]) {
+			case 0:
+				var name = request[2];
+				_g.sendCardImage(channel,name);
+				break;
+			case 1:
+				break;
+			}
+		});
+	}
+	,sendCardImage: function(channel,name) {
+		var _g = this;
+		thx_promise__$Promise_Promise_$Impl_$.failure(thx_promise__$Promise_Promise_$Impl_$.success(this.api.getCard(name),function(card) {
+			haxe_Log.trace("card found",{ fileName : "Bot.hx", lineNumber : 54, className : "msb.Bot", methodName : "sendCardImage", customParams : [card.name]});
+			var attachments = JSON.stringify([{ title : card.name, image_url : msb_Bot.getGathererImageUrl(card)}]);
+			_g.slack.api("chat.postMessage",{ channel : channel, as_user : true, text : " ", attachments : attachments},function(a,b) {
+				haxe_Log.trace(a,{ fileName : "Bot.hx", lineNumber : 61, className : "msb.Bot", methodName : "sendCardImage", customParams : [b]});
 			});
+		}),function(err) {
+			haxe_Log.trace("card not found " + name,{ fileName : "Bot.hx", lineNumber : 65, className : "msb.Bot", methodName : "sendCardImage"});
 		});
 	}
 	,stop: function() {
@@ -1988,8 +1999,21 @@ msb_MessageParser.extractCards = function(message) {
 	return result;
 };
 msb_MessageParser.cardRequest = function(value) {
-	return { name : value};
+	var parts = value.split("|");
+	if(parts.length == 1) return msb_CardRequest.Image(parts[0]);
+	var _g = parts[1].toLowerCase();
+	switch(_g) {
+	case "image":
+		return msb_CardRequest.Image(parts[0]);
+	default:
+		return msb_CardRequest.Invalid;
+	}
 };
+var msb_CardRequest = { __ename__ : ["msb","CardRequest"], __constructs__ : ["Image","Invalid"] };
+msb_CardRequest.Image = function(name) { var $x = ["Image",0,name]; $x.__enum__ = msb_CardRequest; $x.toString = $estr; return $x; };
+msb_CardRequest.Invalid = ["Invalid",1];
+msb_CardRequest.Invalid.toString = $estr;
+msb_CardRequest.Invalid.__enum__ = msb_CardRequest;
 var msb_Queries = function() { };
 msb_Queries.__name__ = ["msb","Queries"];
 msb_Queries.parse = function(q) {
