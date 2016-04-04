@@ -9,7 +9,7 @@ using thx.Arrays;
 using thx.Strings;
 
 class Server implements abe.IRoute {
-  public static function start(api : Api, port = 9998, tokens : Array<String>) {
+  public static function start(api : Api, port = 8888, tokens : Array<String>) {
     var host = "0.0.0.0";
     var app = new abe.App();
     var server = new Server(api);
@@ -40,10 +40,12 @@ class Server implements abe.IRoute {
     bot.stop();
   }
 
+  // only reveal first part of the token
   function hideToken(token : String) {
-    var len = token.length,
-        reveal = 5;
-    return token.substring(0, reveal).rpad('*', len);
+    var parts = token.split("-");
+    for(i in 1...parts.length)
+      parts[i] = ''.rpad("*", parts[i].length);
+    return parts.join("-");
   }
 
   @:get("/")
