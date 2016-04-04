@@ -71,7 +71,7 @@ class Bot {
   public function sendCardRulings(channel, card : Card) {
     var text = (null == card.rulings || card.rulings.length == 0) ?
       'no rulings found for *${card.name}*' :
-      card.rulings.map(function(o) return '${o.date}: ${o.text}').join("\n");
+      card.rulings.map(function(o) return ' • ${o.date}: _${o.text}_').join("\n");
     sendTextMessage(channel, text);
   }
 

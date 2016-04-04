@@ -425,14 +425,20 @@ abe_App.prototype = {
 		return sub;
 	}
 	,http: function(port,host,backlog,callback) {
-		var server = js_node_Http.createServer(this.express);
+		var server = this.httpServer();
 		server.listen(port,host,backlog,callback);
 		return server;
 	}
+	,httpServer: function() {
+		return js_node_Http.createServer(this.express);
+	}
 	,https: function(port,options,host,backlog,callback) {
-		var server = js_node_Https.createServer(options,this.express);
+		var server = this.httpsServer();
 		server.listen(port,host,backlog,callback);
 		return server;
+	}
+	,httpsServer: function() {
+		return js_node_Https.createServer(this.express);
 	}
 	,'use': function(path,middleware) {
 		if(null == path) this.express["use"](middleware); else this.express["use"](path,middleware);
@@ -1994,13 +2000,15 @@ msb_Bot.prototype = {
 		});
 	}
 	,sendCardImage: function(channel,card) {
-		var attachments = JSON.stringify([{ title : card.name, image_url : msb_Bot.getGathererImageUrl(card)}]);
+		var image_url = msb_Bot.getGathererImageUrl(card);
+		haxe_Log.trace(image_url,{ fileName : "Bot.hx", lineNumber : 62, className : "msb.Bot", methodName : "sendCardImage"});
+		var attachments = JSON.stringify([{ title : card.name, image_url : image_url}]);
 		this.slack.api("chat.postMessage",{ channel : channel, as_user : true, text : " ", attachments : attachments},function(a,b) {
 		});
 	}
 	,sendCardRulings: function(channel,card) {
 		var text = null == card.rulings || card.rulings.length == 0?"no rulings found for *" + card.name + "*":card.rulings.map(function(o) {
-			return "" + o.date + ": " + o.text;
+			return " • " + o.date + ": _" + o.text + "_";
 		}).join("\n");
 		this.sendTextMessage(channel,text);
 	}
@@ -2206,7 +2214,7 @@ var msb_Server = function(api) {
 msb_Server.__name__ = ["msb","Server"];
 msb_Server.__interfaces__ = [abe_IRoute];
 msb_Server.start = function(api,port,tokens) {
-	if(port == null) port = 9998;
+	if(port == null) port = 8888;
 	var host = "0.0.0.0";
 	var app = new abe_App();
 	var server = new msb_Server(api);
@@ -2349,9 +2357,14 @@ msb_Server.prototype = {
 		bot.stop();
 	}
 	,hideToken: function(token) {
-		var len = token.length;
-		var reveal = 5;
-		return thx_Strings.rpad(token.substring(0,reveal),"*",len);
+		var parts = token.split("-");
+		var _g1 = 1;
+		var _g = parts.length;
+		while(_g1 < _g) {
+			var i = _g1++;
+			parts[i] = thx_Strings.rpad("","*",parts[i].length);
+		}
+		return parts.join("-");
 	}
 	,index: function(request,response,next) {
 		response.send({ version : "0.1.0"});
@@ -2684,6 +2697,9 @@ thx_Arrays.monoid = function() {
 thx_Arrays.after = function(array,element) {
 	return array.slice(thx__$ReadonlyArray_ReadonlyArray_$Impl_$.indexOf(array,element) + 1);
 };
+thx_Arrays.atIndex = function(array,i) {
+	if(i >= 0 && i < array.length) return haxe_ds_Option.Some(array[i]); else return haxe_ds_Option.None;
+};
 thx_Arrays.each = function(arr,effect) {
 	var tmp = HxOverrides.iter(arr);
 	while(tmp.hasNext()) {
@@ -2956,7 +2972,7 @@ thx_Arrays.spanByIndex = function(arr,spanKey) {
 	while(_g1 < _g) {
 		var i = _g1++;
 		var k = spanKey(i);
-		if(k == null) throw new thx_Error("spanKey function returned null for index " + i,null,{ fileName : "Arrays.hx", lineNumber : 491, className : "thx.Arrays", methodName : "spanByIndex"});
+		if(k == null) throw new thx_Error("spanKey function returned null for index " + i,null,{ fileName : "Arrays.hx", lineNumber : 497, className : "thx.Arrays", methodName : "spanByIndex"});
 		if(cur == k) acc[j].push(arr[i]); else {
 			cur = k;
 			++j;
@@ -2986,14 +3002,6 @@ thx_Arrays.last = function(array) {
 thx_Arrays.mapi = function(array,callback) {
 	return array.map(callback);
 };
-thx_Arrays.forEach = function(array,f) {
-	var _g1 = 0;
-	var _g = array.length;
-	while(_g1 < _g) {
-		var i = _g1++;
-		f(array[i]);
-	}
-};
 thx_Arrays.mapRight = function(array,callback) {
 	var i = array.length;
 	var result = [];
@@ -3022,6 +3030,23 @@ thx_Arrays.reduce = function(array,callback,initial) {
 thx_Arrays.foldLeft = function(array,init,f) {
 	return array.reduce(f,init);
 };
+thx_Arrays.foldLeftEither = function(array,init,f) {
+	var acc = thx_Either.Right(init);
+	var tmp = HxOverrides.iter(array);
+	while(tmp.hasNext()) {
+		var a = tmp.next();
+		switch(acc[1]) {
+		case 0:
+			var error = acc[2];
+			return acc;
+		case 1:
+			var b = acc[2];
+			acc = f(b,a);
+			break;
+		}
+	}
+	return acc;
+};
 thx_Arrays.foldMap = function(array,f,m) {
 	var array1 = array.map(f);
 	var init = thx__$Monoid_Monoid_$Impl_$.get_zero(m);
@@ -3029,6 +3054,9 @@ thx_Arrays.foldMap = function(array,f,m) {
 	return array1.reduce(function(a0,a1) {
 		return thx__$Monoid_Monoid_$Impl_$.append(_e,a0,a1);
 	},init);
+};
+thx_Arrays.fold = function(array,m) {
+	return thx_Arrays.foldMap(array,thx_Functions.identity,m);
 };
 thx_Arrays.resize = function(array,length,fill) {
 	while(array.length < length) array.push(fill);
@@ -3353,6 +3381,18 @@ thx_Arrays.minBy = function(arr,ord) {
 			return thx__$Ord_Ord_$Impl_$.min(_e,a0,a1);
 		},arr[0]));
 	}
+};
+thx_Arrays.toMap = function(arr,keyOrder) {
+	var m = thx_fp_MapImpl.Tip;
+	var collisions = [];
+	var _g1 = 0;
+	var _g = arr.length;
+	while(_g1 < _g) {
+		var i = _g1++;
+		var tuple = arr[i];
+		if(thx_Options.isNone(thx_fp__$Map_Map_$Impl_$.lookup(m,tuple._0,keyOrder))) m = thx_fp__$Map_Map_$Impl_$.insert(m,tuple._0,tuple._1,keyOrder); else collisions.push(tuple._0);
+	}
+	return thx_Options.toFailure(thx__$Nel_Nel_$Impl_$.fromArray(collisions),m);
 };
 var thx_ArrayFloats = function() { };
 thx_ArrayFloats.__name__ = ["thx","ArrayFloats"];
@@ -9515,7 +9555,7 @@ thx_Iterators.order = function(it,sort) {
 };
 thx_Iterators.reduce = function(it,callback,initial) {
 	var result = initial;
-	while(it.hasNext()) result = callback(initial,it.next());
+	while(it.hasNext()) result = callback(result,it.next());
 	return result;
 };
 thx_Iterators.reducei = function(it,callback,initial) {
@@ -10555,6 +10595,9 @@ thx_Options.toBool = function(option) {
 		return true;
 	}
 };
+thx_Options.isNone = function(option) {
+	return !thx_Options.toBool(option);
+};
 thx_Options.toOption = function(value) {
 	if(null == value) return haxe_ds_Option.None; else return haxe_ds_Option.Some(value);
 };
@@ -10631,6 +10674,24 @@ thx_Options.toSuccessNel = function(option,error) {
 	case 0:
 		var v = option[2];
 		return thx_Either.Right(v);
+	}
+};
+thx_Options.toFailure = function(error,value) {
+	switch(error[1]) {
+	case 1:
+		return thx_Either.Right(value);
+	case 0:
+		var e = error[2];
+		return thx_Either.Left(e);
+	}
+};
+thx_Options.toFailureNel = function(error,value) {
+	switch(error[1]) {
+	case 1:
+		return thx_Either.Right(value);
+	case 0:
+		var e = error[2];
+		return thx_Either.Left(thx__$Nel_Nel_$Impl_$.pure(e));
 	}
 };
 thx_Options.ap2 = function(f,v1,v2) {
@@ -14029,6 +14090,364 @@ var thx_format__$NumberFormat_CustomFormat = { __ename__ : ["thx","format","_Num
 thx_format__$NumberFormat_CustomFormat.Literal = function(s) { var $x = ["Literal",0,s]; $x.__enum__ = thx_format__$NumberFormat_CustomFormat; $x.toString = $estr; return $x; };
 thx_format__$NumberFormat_CustomFormat.Hash = function(first) { var $x = ["Hash",1,first]; $x.__enum__ = thx_format__$NumberFormat_CustomFormat; $x.toString = $estr; return $x; };
 thx_format__$NumberFormat_CustomFormat.Zero = function(first) { var $x = ["Zero",2,first]; $x.__enum__ = thx_format__$NumberFormat_CustomFormat; $x.toString = $estr; return $x; };
+var thx_fp__$Map_Map_$Impl_$ = {};
+thx_fp__$Map_Map_$Impl_$.__name__ = ["thx","fp","_Map","Map_Impl_"];
+thx_fp__$Map_Map_$Impl_$.empty = function() {
+	return thx_fp_MapImpl.Tip;
+};
+thx_fp__$Map_Map_$Impl_$.singleton = function(k,v) {
+	return thx_fp_MapImpl.Bin(1,k,v,thx_fp_MapImpl.Tip,thx_fp_MapImpl.Tip);
+};
+thx_fp__$Map_Map_$Impl_$.bin = function(k,v,lhs,rhs) {
+	return thx_fp_MapImpl.Bin(thx_fp__$Map_Map_$Impl_$.size(lhs) + thx_fp__$Map_Map_$Impl_$.size(rhs) + 1,k,v,lhs,rhs);
+};
+thx_fp__$Map_Map_$Impl_$.fromNative = function(map,comparator) {
+	var r = thx_fp_MapImpl.Tip;
+	var tmp = map.keys();
+	while(tmp.hasNext()) {
+		var key = tmp.next();
+		r = thx_fp__$Map_Map_$Impl_$.insert(r,key,map.get(key),comparator);
+	}
+	return r;
+};
+thx_fp__$Map_Map_$Impl_$.lookup = function(this1,key,comparator) {
+	switch(this1[1]) {
+	case 0:
+		return haxe_ds_Option.None;
+	case 1:
+		var rhs = this1[6];
+		var lhs = this1[5];
+		var xvalue = this1[4];
+		var xkey = this1[3];
+		var size = this1[2];
+		var c = comparator(key,xkey);
+		switch(c[1]) {
+		case 0:
+			return thx_fp__$Map_Map_$Impl_$.lookup(lhs,key,comparator);
+		case 1:
+			return thx_fp__$Map_Map_$Impl_$.lookup(rhs,key,comparator);
+		case 2:
+			return haxe_ds_Option.Some(xvalue);
+		}
+		break;
+	}
+};
+thx_fp__$Map_Map_$Impl_$.lookupTuple = function(this1,key,comparator) {
+	switch(this1[1]) {
+	case 0:
+		return haxe_ds_Option.None;
+	case 1:
+		var rhs = this1[6];
+		var lhs = this1[5];
+		var xvalue = this1[4];
+		var xkey = this1[3];
+		var size = this1[2];
+		var c = comparator(key,xkey);
+		switch(c[1]) {
+		case 0:
+			return thx_fp__$Map_Map_$Impl_$.lookupTuple(lhs,key,comparator);
+		case 1:
+			return thx_fp__$Map_Map_$Impl_$.lookupTuple(rhs,key,comparator);
+		case 2:
+			var this2 = { _0 : xkey, _1 : xvalue};
+			return haxe_ds_Option.Some(this2);
+		}
+		break;
+	}
+};
+thx_fp__$Map_Map_$Impl_$["delete"] = function(this1,key,comparator) {
+	switch(this1[1]) {
+	case 0:
+		return thx_fp_MapImpl.Tip;
+	case 1:
+		var rhs = this1[6];
+		var lhs = this1[5];
+		var x = this1[4];
+		var kx = this1[3];
+		var size = this1[2];
+		var _g = comparator(key,kx);
+		switch(_g[1]) {
+		case 0:
+			return thx_fp__$Map_Map_$Impl_$.balance(kx,x,thx_fp__$Map_Map_$Impl_$["delete"](lhs,key,comparator),rhs);
+		case 1:
+			return thx_fp__$Map_Map_$Impl_$.balance(kx,x,lhs,thx_fp__$Map_Map_$Impl_$["delete"](rhs,key,comparator));
+		case 2:
+			return thx_fp__$Map_Map_$Impl_$.glue(lhs,rhs);
+		}
+		break;
+	}
+};
+thx_fp__$Map_Map_$Impl_$.insert = function(this1,kx,x,comparator) {
+	switch(this1[1]) {
+	case 0:
+		return thx_fp_MapImpl.Bin(1,kx,x,thx_fp_MapImpl.Tip,thx_fp_MapImpl.Tip);
+	case 1:
+		var rhs = this1[6];
+		var lhs = this1[5];
+		var y = this1[4];
+		var ky = this1[3];
+		var sz = this1[2];
+		var _g = comparator(kx,ky);
+		switch(_g[1]) {
+		case 0:
+			return thx_fp__$Map_Map_$Impl_$.balance(ky,y,thx_fp__$Map_Map_$Impl_$.insert(lhs,kx,x,comparator),rhs);
+		case 1:
+			return thx_fp__$Map_Map_$Impl_$.balance(ky,y,lhs,thx_fp__$Map_Map_$Impl_$.insert(rhs,kx,x,comparator));
+		case 2:
+			return thx_fp_MapImpl.Bin(sz,kx,x,lhs,rhs);
+		}
+		break;
+	}
+};
+thx_fp__$Map_Map_$Impl_$.foldLeft = function(this1,b,f) {
+	switch(this1[1]) {
+	case 0:
+		return b;
+	case 1:
+		var r = this1[6];
+		var l = this1[5];
+		var x = this1[4];
+		return thx_fp__$Map_Map_$Impl_$.foldLeft(r,thx_fp__$Map_Map_$Impl_$.foldLeft(l,f(b,x),f),f);
+	}
+};
+thx_fp__$Map_Map_$Impl_$.map = function(this1,f) {
+	switch(this1[1]) {
+	case 0:
+		return thx_fp_MapImpl.Tip;
+	case 1:
+		var rhs = this1[6];
+		var lhs = this1[5];
+		var y = this1[4];
+		var ky = this1[3];
+		var sz = this1[2];
+		return thx_fp_MapImpl.Bin(sz,ky,f(y),thx_fp__$Map_Map_$Impl_$.map(lhs,f),thx_fp__$Map_Map_$Impl_$.map(rhs,f));
+	}
+};
+thx_fp__$Map_Map_$Impl_$.values = function(this1) {
+	return thx_fp__$Map_Map_$Impl_$.foldLeft(this1,[],function(acc,v) {
+		acc.push(v);
+		return acc;
+	});
+};
+thx_fp__$Map_Map_$Impl_$.foldLeftKeys = function(this1,b,f) {
+	switch(this1[1]) {
+	case 0:
+		return b;
+	case 1:
+		var r = this1[6];
+		var l = this1[5];
+		var kx = this1[3];
+		return thx_fp__$Map_Map_$Impl_$.foldLeftKeys(r,thx_fp__$Map_Map_$Impl_$.foldLeftKeys(l,f(b,kx),f),f);
+	}
+};
+thx_fp__$Map_Map_$Impl_$.foldLeftAll = function(this1,b,f) {
+	switch(this1[1]) {
+	case 0:
+		return b;
+	case 1:
+		var r = this1[6];
+		var l = this1[5];
+		var x = this1[4];
+		var kx = this1[3];
+		return thx_fp__$Map_Map_$Impl_$.foldLeftAll(r,thx_fp__$Map_Map_$Impl_$.foldLeftAll(l,f(b,kx,x),f),f);
+	}
+};
+thx_fp__$Map_Map_$Impl_$.foldLeftTuples = function(this1,b,f) {
+	switch(this1[1]) {
+	case 0:
+		return b;
+	case 1:
+		var r = this1[6];
+		var l = this1[5];
+		var x = this1[4];
+		var kx = this1[3];
+		var this2 = { _0 : kx, _1 : x};
+		return thx_fp__$Map_Map_$Impl_$.foldLeftTuples(r,thx_fp__$Map_Map_$Impl_$.foldLeftTuples(l,f(b,this2),f),f);
+	}
+};
+thx_fp__$Map_Map_$Impl_$.size = function(this1) {
+	switch(this1[1]) {
+	case 0:
+		return 0;
+	case 1:
+		var size = this1[2];
+		return size;
+	}
+};
+thx_fp__$Map_Map_$Impl_$.balance = function(k,x,lhs,rhs) {
+	var ls = thx_fp__$Map_Map_$Impl_$.size(lhs);
+	var rs = thx_fp__$Map_Map_$Impl_$.size(rhs);
+	var xs = ls + rs + 1;
+	if(ls + rs <= 1) return thx_fp_MapImpl.Bin(xs,k,x,lhs,rhs); else if(rs >= 5 * ls) return thx_fp__$Map_Map_$Impl_$.rotateLeft(k,x,lhs,rhs); else if(ls >= 5 * rs) return thx_fp__$Map_Map_$Impl_$.rotateRight(k,x,lhs,rhs); else return thx_fp_MapImpl.Bin(xs,k,x,lhs,rhs);
+};
+thx_fp__$Map_Map_$Impl_$.glue = function(this1,that) {
+	var l = this1;
+	var l1 = this1;
+	switch(this1[1]) {
+	case 0:
+		return that;
+	default:
+		var r = that;
+		var r1 = that;
+		switch(that[1]) {
+		case 0:
+			return this1;
+		default:
+			if(thx_fp__$Map_Map_$Impl_$.size(l) > thx_fp__$Map_Map_$Impl_$.size(r)) {
+				var t = thx_fp__$Map_Map_$Impl_$.deleteFindMax(l);
+				return thx_fp__$Map_Map_$Impl_$.balance(t.k,t.x,t.t,r);
+			} else {
+				var t1 = thx_fp__$Map_Map_$Impl_$.deleteFindMin(r1);
+				return thx_fp__$Map_Map_$Impl_$.balance(t1.k,t1.x,l1,t1.t);
+			}
+		}
+	}
+};
+thx_fp__$Map_Map_$Impl_$.deleteFindMin = function(map) {
+	switch(map[1]) {
+	case 1:
+		var l = map[5];
+		switch(map[5][1]) {
+		case 0:
+			var r = map[6];
+			var x = map[4];
+			var k = map[3];
+			return { k : k, x : x, t : r};
+		default:
+			var r1 = map[6];
+			var x1 = map[4];
+			var k1 = map[3];
+			var t = thx_fp__$Map_Map_$Impl_$.deleteFindMin(l);
+			return { k : t.k, x : t.x, t : thx_fp__$Map_Map_$Impl_$.balance(k1,x1,t.t,r1)};
+		}
+		break;
+	case 0:
+		throw new thx_Error("can not return the minimal element of an empty map",null,{ fileName : "Map.hx", lineNumber : 161, className : "thx.fp._Map.Map_Impl_", methodName : "deleteFindMin"});
+		break;
+	}
+};
+thx_fp__$Map_Map_$Impl_$.deleteFindMax = function(map) {
+	switch(map[1]) {
+	case 1:
+		var r = map[6];
+		switch(map[6][1]) {
+		case 0:
+			var l = map[5];
+			var x = map[4];
+			var k = map[3];
+			return { k : k, x : x, t : l};
+		default:
+			var l1 = map[5];
+			var x1 = map[4];
+			var k1 = map[3];
+			var t = thx_fp__$Map_Map_$Impl_$.deleteFindMax(r);
+			return { k : t.k, x : t.x, t : thx_fp__$Map_Map_$Impl_$.balance(k1,x1,l1,t.t)};
+		}
+		break;
+	case 0:
+		throw new thx_Error("can not return the maximal element of an empty map",null,{ fileName : "Map.hx", lineNumber : 171, className : "thx.fp._Map.Map_Impl_", methodName : "deleteFindMax"});
+		break;
+	}
+};
+thx_fp__$Map_Map_$Impl_$.rotateLeft = function(k,x,lhs,rhs) {
+	switch(rhs[1]) {
+	case 1:
+		var ry = rhs[6];
+		var ly = rhs[5];
+		if(thx_fp__$Map_Map_$Impl_$.size(ly) < 2 * thx_fp__$Map_Map_$Impl_$.size(ry)) return thx_fp__$Map_Map_$Impl_$.singleLeft(k,x,lhs,rhs); else return thx_fp__$Map_Map_$Impl_$.doubleLeft(k,x,lhs,rhs);
+		break;
+	default:
+		return thx_fp__$Map_Map_$Impl_$.doubleLeft(k,x,lhs,rhs);
+	}
+};
+thx_fp__$Map_Map_$Impl_$.rotateRight = function(k,x,lhs,rhs) {
+	switch(lhs[1]) {
+	case 1:
+		var ry = lhs[6];
+		var ly = lhs[5];
+		if(thx_fp__$Map_Map_$Impl_$.size(ry) < 2 * thx_fp__$Map_Map_$Impl_$.size(ly)) return thx_fp__$Map_Map_$Impl_$.singleRight(k,x,lhs,rhs); else return thx_fp__$Map_Map_$Impl_$.doubleRight(k,x,lhs,rhs);
+		break;
+	default:
+		return thx_fp__$Map_Map_$Impl_$.doubleRight(k,x,lhs,rhs);
+	}
+};
+thx_fp__$Map_Map_$Impl_$.singleLeft = function(k1,x1,t1,rhs) {
+	switch(rhs[1]) {
+	case 1:
+		var t3 = rhs[6];
+		var t2 = rhs[5];
+		var x2 = rhs[4];
+		var k2 = rhs[3];
+		var lhs = thx_fp_MapImpl.Bin(thx_fp__$Map_Map_$Impl_$.size(t1) + thx_fp__$Map_Map_$Impl_$.size(t2) + 1,k1,x1,t1,t2);
+		return thx_fp_MapImpl.Bin(thx_fp__$Map_Map_$Impl_$.size(lhs) + thx_fp__$Map_Map_$Impl_$.size(t3) + 1,k2,x2,lhs,t3);
+	default:
+		throw new thx_Error("damn it, this should never happen",null,{ fileName : "Map.hx", lineNumber : 193, className : "thx.fp._Map.Map_Impl_", methodName : "singleLeft"});
+	}
+};
+thx_fp__$Map_Map_$Impl_$.singleRight = function(k1,x1,lhs,t3) {
+	switch(lhs[1]) {
+	case 1:
+		var t2 = lhs[6];
+		var t1 = lhs[5];
+		var x2 = lhs[4];
+		var k2 = lhs[3];
+		var rhs = thx_fp_MapImpl.Bin(thx_fp__$Map_Map_$Impl_$.size(t2) + thx_fp__$Map_Map_$Impl_$.size(t3) + 1,k1,x1,t2,t3);
+		return thx_fp_MapImpl.Bin(thx_fp__$Map_Map_$Impl_$.size(t1) + thx_fp__$Map_Map_$Impl_$.size(rhs) + 1,k2,x2,t1,rhs);
+	default:
+		throw new thx_Error("damn it, this should never happen",null,{ fileName : "Map.hx", lineNumber : 199, className : "thx.fp._Map.Map_Impl_", methodName : "singleRight"});
+	}
+};
+thx_fp__$Map_Map_$Impl_$.doubleLeft = function(k1,x1,t1,rhs) {
+	switch(rhs[1]) {
+	case 1:
+		switch(rhs[5][1]) {
+		case 1:
+			var t4 = rhs[6];
+			var x2 = rhs[4];
+			var k2 = rhs[3];
+			var t3 = rhs[5][6];
+			var t2 = rhs[5][5];
+			var x3 = rhs[5][4];
+			var k3 = rhs[5][3];
+			var lhs = thx_fp_MapImpl.Bin(thx_fp__$Map_Map_$Impl_$.size(t1) + thx_fp__$Map_Map_$Impl_$.size(t2) + 1,k1,x1,t1,t2);
+			var rhs1 = thx_fp_MapImpl.Bin(thx_fp__$Map_Map_$Impl_$.size(t3) + thx_fp__$Map_Map_$Impl_$.size(t4) + 1,k2,x2,t3,t4);
+			return thx_fp_MapImpl.Bin(thx_fp__$Map_Map_$Impl_$.size(lhs) + thx_fp__$Map_Map_$Impl_$.size(rhs1) + 1,k3,x3,lhs,rhs1);
+		default:
+			throw new thx_Error("damn it, this should never happen",null,{ fileName : "Map.hx", lineNumber : 206, className : "thx.fp._Map.Map_Impl_", methodName : "doubleLeft"});
+		}
+		break;
+	default:
+		throw new thx_Error("damn it, this should never happen",null,{ fileName : "Map.hx", lineNumber : 206, className : "thx.fp._Map.Map_Impl_", methodName : "doubleLeft"});
+	}
+};
+thx_fp__$Map_Map_$Impl_$.doubleRight = function(k1,x1,lhs,t4) {
+	switch(lhs[1]) {
+	case 1:
+		switch(lhs[6][1]) {
+		case 1:
+			var t1 = lhs[5];
+			var x2 = lhs[4];
+			var k2 = lhs[3];
+			var t3 = lhs[6][6];
+			var t2 = lhs[6][5];
+			var x3 = lhs[6][4];
+			var k3 = lhs[6][3];
+			var lhs1 = thx_fp_MapImpl.Bin(thx_fp__$Map_Map_$Impl_$.size(t1) + thx_fp__$Map_Map_$Impl_$.size(t2) + 1,k2,x2,t1,t2);
+			var rhs = thx_fp_MapImpl.Bin(thx_fp__$Map_Map_$Impl_$.size(t3) + thx_fp__$Map_Map_$Impl_$.size(t4) + 1,k1,x1,t3,t4);
+			return thx_fp_MapImpl.Bin(thx_fp__$Map_Map_$Impl_$.size(lhs1) + thx_fp__$Map_Map_$Impl_$.size(rhs) + 1,k3,x3,lhs1,rhs);
+		default:
+			throw new thx_Error("damn it, this should never happen",null,{ fileName : "Map.hx", lineNumber : 213, className : "thx.fp._Map.Map_Impl_", methodName : "doubleRight"});
+		}
+		break;
+	default:
+		throw new thx_Error("damn it, this should never happen",null,{ fileName : "Map.hx", lineNumber : 213, className : "thx.fp._Map.Map_Impl_", methodName : "doubleRight"});
+	}
+};
+var thx_fp_MapImpl = { __ename__ : ["thx","fp","MapImpl"], __constructs__ : ["Tip","Bin"] };
+thx_fp_MapImpl.Tip = ["Tip",0];
+thx_fp_MapImpl.Tip.toString = $estr;
+thx_fp_MapImpl.Tip.__enum__ = thx_fp_MapImpl;
+thx_fp_MapImpl.Bin = function(size,key,value,lhs,rhs) { var $x = ["Bin",1,size,key,value,lhs,rhs]; $x.__enum__ = thx_fp_MapImpl; $x.toString = $estr; return $x; };
 var thx_promise_Future = function() {
 	this.handlers = [];
 	this.state = haxe_ds_Option.None;
@@ -15105,9 +15524,9 @@ abe_core_ArgumentsFilter.globalFilters = (function($this) {
 	filters.push(new abe_core_filters_ArrayFilter("Date",",",date));
 	filters.push(new abe_core_filters_ArrayFilter("thx.DateTime",",",dt));
 	filters.push(new abe_core_filters_ArrayFilter("thx.DateTimeUtc",",",dtutc));
-	filters.push(new abe_core_filters_ArrayFilter("thx.LocalDate",",",ldate));
 	filters.push(new abe_core_filters_ArrayFilter("Float",",",$float));
 	filters.push(new abe_core_filters_ArrayFilter("Int",",",$int));
+	filters.push(new abe_core_filters_ArrayFilter("thx.LocalDate",",",ldate));
 	filters.push(new abe_core_filters_ArrayFilter("String",",",string));
 	filters.push(new abe_core_filters_ArrayFilter("{}","|",object));
 	$r = filters;
@@ -15478,6 +15897,9 @@ thx_Floats.TOLERANCE = 10e-5;
 thx_Floats.EPSILON = 1e-9;
 thx_Floats.pattern_parse = new EReg("^(\\+|-)?\\d+(\\.\\d+)?(e-?\\d+)?$","");
 thx_Floats.order = thx__$Ord_Ord_$Impl_$.fromIntComparison(thx_Floats.compare);
+thx_Floats.monoid = { zero : 0.0, append : function(a,b) {
+	return a + b;
+}};
 thx_Int64s.one = (function($this) {
 	var $r;
 	var x = new haxe__$Int64__$_$_$Int64(0,1);
@@ -15615,6 +16037,8 @@ thx_culture_Pattern.numberNegatives = ["(n)","-n","- n","n-","n -"];
 thx_culture_Pattern.percentNegatives = ["-n %","-n%","-%n","%-n","%n-","n-%","n%-","-%n","n %-","% n-","% -n","n- %"];
 thx_culture_Pattern.percentPositives = ["n %","n%","%n","% n"];
 thx_format_NumberFormat.BASE = "0123456789abcdefghijklmnopqrstuvwxyz";
+thx_fp__$Map_Map_$Impl_$.delta = 5;
+thx_fp__$Map_Map_$Impl_$.ratio = 2;
 thx_promise__$Promise_Promise_$Impl_$.nil = thx_promise__$Promise_Promise_$Impl_$.value(thx_Nil.nil);
 thx_text_Diactrics.map = (function($this) {
 	var $r;
