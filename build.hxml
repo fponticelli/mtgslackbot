@@ -9,6 +9,7 @@
 -lib thx.promise
 -lib thx.text
 -lib mtgx
+-lib express
 -cp src
 --macro jsrequire.JSRequire.npmInstall(true)
 

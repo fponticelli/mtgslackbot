@@ -159,7 +159,7 @@ class Server implements abe.IRoute {
 
   static function limitResponse<T>(promise : Promise<Array<T>>, offset, limit, response : Response) {
     promise
-      .mapSuccess(function(values : Array<T>) return values.slice(offset, offset + limit))
+      .map(function(values : Array<T>) return values.slice(offset, offset + limit))
       .success.fn(response.send(_))
       .failure.fn(response.status(503).send(_));
   }

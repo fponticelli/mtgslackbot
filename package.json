@@ -20,6 +20,8 @@
   },
   "homepage": "https://github.com/fponticelli/mtgslackbot",
   "dependencies": {
+    "aqb": "^2.1.0",
+    "arangojs": "^4.3.0",
     "body-parser": "^1.15.0",
     "express": "^4.13.4",
     "slack-node": "^0.2.0",
